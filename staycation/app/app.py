@@ -84,9 +84,44 @@ def upload():
 
                     aBooking = Booking.createBooking(check_in_date=check_in_date, customer=existing_user, package=existing_package)
                     aBooking.calculate_total_cost()
-                    
-        return render_template("upload.html", panel="Upload")
-    
+            elif datatype == "ListOfBooking":
+                for item in list(dict_reader):
+                    # Parse base check-in date in DD/MM/YYYY
+                    try:
+                        base_checkin = dt.datetime.strptime(item['check_in_date'].strip(), "%d/%m/%Y")
+                    except Exception:
+                        continue
+
+                    # Resolve user
+                    user = User.getUser(email=item['customer'].strip())
+                    if not user:
+                        continue
+
+                    # Parse list of hotel names (JSON array in the CSV cell)
+                    try:
+                        hotel_list = json.loads(item['hotel_names'])
+                    except Exception:
+                        continue
+                    if not isinstance(hotel_list, list):
+                        continue
+
+                    # Create consecutive bookings
+                    current_checkin = base_checkin
+                    for name in hotel_list:
+                        pkg = Package.getPackage(hotel_name=str(name).strip())
+                        if not pkg:
+                            continue
+
+                        aBooking = Booking.createBooking(
+                            check_in_date=current_checkin,
+                            customer=user,
+                            package=pkg
+                        )
+                        aBooking.calculate_total_cost()
+                        current_checkin = current_checkin + dt.timedelta(days=int(pkg.duration))
+
+    return render_template("upload.html", panel="Upload")
+
 @app.route("/changeAvatar")
 def changeAvatar():
     basedir = os.path.abspath(os.path.dirname(__file__))
