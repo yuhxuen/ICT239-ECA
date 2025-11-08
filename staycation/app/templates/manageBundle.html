@@ -2,14 +2,14 @@
 <style>
   /* light rules to mimic the figure */
   .rule-full {
-    height: 1px;
-    background: #e5e5e5;
+    height: 4px;
+    background: #fff;
     width: 100%;
     margin: 16px 0;
   }
   .rule-partial {
-    height: 1px;
-    background: #e5e5e5;
+    height: 2px;
+    background: #fff;
     width: 70%;
     margin: 12px 0 12px auto;
   }
@@ -32,13 +32,6 @@
   }
 </style>
 
-<!-- Header row -->
-<div class="row no-gutters col-12">
-  <div class="col-2 col-heading">Purchase Date</div>
-  <div class="col-2 col-heading ml-1">Expiry date</div>
-  <div class="col col-heading ml-1">Packages in Bundle</div>
-</div>
-
 {% if not bundles %}
 <div class="text-muted">No Purchased Bundle</div>
 {% endif %} {% for b in bundles %}
@@ -50,6 +43,13 @@
   </div>
   <div class="col-2">
     <div>{{ b.expiry_date.strftime('%d/%m/%Y') }}</div>
+  </div>
+
+  <!-- Header row -->
+  <div class="row no-gutters col-12">
+    <div class="col-2 col-heading">Purchase Date</div>
+    <div class="col-2 col-heading ml-1">Expiry date</div>
+    <div class="col col-heading ml-1">Packages in Bundle</div>
   </div>
 
   <!-- packages column -->
