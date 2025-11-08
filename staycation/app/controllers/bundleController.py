@@ -5,6 +5,7 @@ from models.bundle import BundlePurchase
 from models.book import Booking
 from models.package import Package
 
+from datetime import datetime
 from utils.checks import non_admin_required
 bundle = Blueprint('bundleController', __name__)  # use bundleController.fn
 
@@ -20,31 +21,40 @@ def manage_bundle():
 @login_required
 @non_admin_required
 def book_from_bundle():
-    bundle_id   = request.form.get('bundle_id')
-    package_id  = request.form.get('package_id')
-    check_in    = request.form.get('check_in_date')  # expected 'YYYY-MM-DD'
+    bundle_id  = request.form.get('bundle_id')
+    package_id = request.form.get('package_id')
+    check_in   = request.form.get('check_in_date')
 
-    # Validate bundle ownership
     bp = BundlePurchase.objects(id=bundle_id, customer=current_user).first()
     if not bp:
         flash("Bundle not found.", "warning")
         return redirect(url_for('bundleController.manage_bundle'))
 
-    # Ensure bundle not expired
     if bp.is_expired():
         flash("This bundle has expired.", "warning")
         return redirect(url_for('bundleController.manage_bundle'))
 
-    # Resolve package
+    # Server-side guard: check-in cannot be before purchase date
+    try:
+        ci_dt = datetime.strptime(check_in, "%Y-%m-%d")
+    except Exception:
+        flash("Invalid date.", "warning")
+        return redirect(url_for('bundleController.manage_bundle'))
+
+    # Normalize purchase date to date precision
+    purchase_dt = bp.purchased_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    if ci_dt < purchase_dt:
+        flash("Check-in date cannot be earlier than the bundle purchase date.", "warning")
+        return redirect(url_for('bundleController.manage_bundle'))
+
     pkg = Package.objects(id=package_id).first()
     if not pkg:
         flash("Package not found.", "warning")
         return redirect(url_for('bundleController.manage_bundle'))
 
-    # Create booking and mark utilised
     Booking.createBooking(check_in, current_user, pkg)
-    bp.mark_utilised(package_id)
+    bp.mark_utilised(str(package_id))
 
-    flash("Booking created from bundle and marked as utilised.", "info")
+    flash("Booking created from bundle.", "info")
     return redirect(url_for('bundleController.manage_bundle'))
 
