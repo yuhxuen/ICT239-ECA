@@ -1,0 +1,130 @@
+{% extends "base.html" %} {% block mainblock %}
+
+<div class="col-xl-8 col-md-10 p-2">
+  <div class="card card-common">
+    <div class="card-header">
+      <label class="mb-0 mr-2">Chart Type:</label>
+      <select
+        id="chartType"
+        class="custom-select d-inline-block"
+        style="width: 240px"
+      >
+        <option value="none" selected>Choose a Type</option>
+        <option value="amount">Amount Incoming</option>
+        <option value="month">Bookings By Month</option>
+      </select>
+    </div>
+    <div class="card-body">
+      <!-- Empty by default (Figure Q4a) -->
+      <div id="placeholder" class="text-muted">
+        Select a chart type to display.
+      </div>
+      <div
+        class="chart-container"
+        style="position: relative; width: 100%; height: 70vh; display: none"
+      >
+        <canvas id="chartCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  (() => {
+    let chart; // Chart.js instance
+    const selectEl = document.getElementById("chartType");
+    const canvasEl = document.getElementById("chartCanvas");
+    const wrapEl = canvasEl.parentElement;
+    const placeholder = document.getElementById("placeholder");
+
+    function clearChart() {
+      if (chart) {
+        chart.destroy();
+        chart = null;
+      }
+      wrapEl.style.display = "none";
+      placeholder.style.display = "block";
+    }
+
+    selectEl.addEventListener("change", async () => {
+      const v = selectEl.value;
+      // always reset the current chart before drawing another
+      if (chart) {
+        chart.destroy();
+        chart = null;
+      }
+
+      if (v === "none") {
+        clearChart();
+        return;
+      }
+
+      placeholder.style.display = "none";
+      wrapEl.style.display = "block";
+
+      if (v === "amount") {
+        // Reuse existing backend that powers trend_chart.html
+        const resp = await fetch("/trend_chart", { method: "POST" });
+        const payload = await resp.json();
+        chart = new Chart(canvasEl.getContext("2d"), {
+          type: "line",
+          data: {
+            labels: payload.labels,
+            datasets: payload.series.map((s) => ({
+              label: s.label,
+              data: s.data,
+              fill: false,
+              tension: 0.2,
+            })),
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { position: "top" } },
+            scales: {
+              x: { title: { display: true, text: "Month" } },
+              y: {
+                title: { display: true, text: "Amount ($)" },
+                beginAtZero: true,
+              },
+            },
+          },
+        });
+      }
+
+      if (v === "month") {
+        const resp = await fetch("/dashboard/bookings_by_month", {
+          method: "POST",
+        });
+        const payload = await resp.json(); // {hotels:[...], months:[...], matrix:[[...]]}
+        const colors = payload.months.map(() => undefined); // use Chart.js defaults
+
+        chart = new Chart(canvasEl.getContext("2d"), {
+          type: "bar",
+          data: {
+            labels: payload.hotels, // x-axis = hotels, sorted
+            datasets: payload.months.map((m, i) => ({
+              label: m,
+              data: payload.matrix[i],
+              backgroundColor: colors[i],
+            })),
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { position: "top" } },
+            scales: {
+              x: { title: { display: true, text: "Hotel (A–Z)" } },
+              y: {
+                title: { display: true, text: "Bookings" },
+                beginAtZero: true,
+                ticks: { stepSize: 1 },
+              },
+            },
+          },
+        });
+      }
+    });
+  })();
+</script>
+{% endblock %}
