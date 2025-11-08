@@ -19,3 +19,30 @@ class BundlePurchase(db.Document):
         # persist a bundle with all selected packages marked unused
         items = [BundledItem(package=p, utilised=False) for p in package_objs]
         return BundlePurchase(customer=customer, bundledPackages=items).save()
+
+    @property
+    def expiry_date(self):
+        # Bundle is valid for 1 year from purchase
+        return self.purchased_date + timedelta(days=365)
+
+    def is_expired(self):
+        # True if bundle no longer valid
+        return datetime.utcnow() > self.expiry_date
+
+    @staticmethod
+    def for_user_sorted(user):
+        # All bundles for a user, ascending purchase date (requirement)
+        return BundlePurchase.objects(customer=user).order_by('purchased_date')
+
+    def mark_utilised(self, package_id):
+        # Flip one bundled item to utilised = True
+        for bi in self.bundledPackages:
+            if str(bi.package.id) == str(package_id):
+                bi.utilised = True
+                self.save()
+                return True
+        return False
+
+    def unutilised_items(self):
+        # Convenience for templates
+        return [bi for bi in self.bundledPackages if not bi.utilised]

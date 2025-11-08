@@ -8,6 +8,8 @@ from models.forms import BookForm
 from models.users import User
 from models.package import Package
 
+from utils.checks import non_admin_required
+
 package = Blueprint('packageController', __name__)
 
 @package.route('/')
@@ -23,12 +25,9 @@ def viewPackageDetail(hotel_name):
 
 @package.route('/purchaseBundle', methods=['POST'])
 @login_required
+@non_admin_required
 def purchaseBundle():
     # block admins; only non-admin users may purchase bundles
-    if current_user.email == "admin@abc.com":
-        flash("This is a non-admin function. Please log in as a non-admin user to use this function.", "info")
-        return redirect(url_for('packageController.packages'))
-
     selected_ids = request.form.getlist('package_ids')  # list of package ObjectIds from checkboxes
     if not selected_ids:
         flash("Please select packages to buy as a bundle", "warning")

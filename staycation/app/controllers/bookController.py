@@ -7,18 +7,15 @@ from models.package import Package
 from models.book import Booking
 
 from datetime import date, timedelta
+from utils.checks import non_admin_required
 
 booking = Blueprint('bookingController', __name__)  # use bookingController.fn
 
 
 @booking.route('/view')
 @login_required
+@non_admin_required
 def view():
-    # prevent admin user from accessing the booking form
-    if current_user.email == "admin@abc.com":
-        flash("This is a non-admin function. Please log in as a non-admin user to use this function.", "info")
-        return redirect(url_for('packageController.packages'))
-
     form = BookForm()
     hotel_name = request.args.get('hotel_name').strip("'")
     the_package_to_be_booked = Package.getPackage(hotel_name=hotel_name)
@@ -28,12 +25,8 @@ def view():
 
 @booking.route('/book', methods=['GET', 'POST'])
 @login_required
+@non_admin_required
 def book():
-    # prevent admin user from submitting a booking
-    if current_user.email == "admin@abc.com":
-        flash("This is a non-admin function. Please log in as a non-admin user to use this function.", "info")
-        return redirect(url_for('packageController.packages'))
-
     if request.method == 'POST':
         hotel_name = request.form.get("hotel_name")
         check_in_date = request.form.get("check_in_date")

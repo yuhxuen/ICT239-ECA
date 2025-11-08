@@ -30,5 +30,8 @@ class User(UserMixin, db.Document):
         user.avatar = filename
         user.save()
 
+    ADMIN_EMAIL = "admin@abc.com"
 
-
+    @property
+    def is_admin(self):
+        return (self.email or "").lower() == self.ADMIN_EMAIL
